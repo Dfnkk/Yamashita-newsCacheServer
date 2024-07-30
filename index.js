@@ -19,14 +19,14 @@ async function refreshCache() {
         for (const lang in langs) {
 
             for (const category in categories) {
-                const uri = `${uri}&lang=${lang}&category=${category}`
+                const url = `${uri}&lang=${langs[lang]}&category=${categories[category]}`
                 const response = await axios.get(url)
                 const responseData = response.data;
 
                 const document = {
-                    lang,
-                    category,
-                    data: responseData
+                    lang: langs[lang],
+                    category: categories[category],
+                    data: responseData,
                 }
 
                 jsonData.push(document);
@@ -35,7 +35,7 @@ async function refreshCache() {
             }
         }
 
-        db = jsonDaya
+        db = jsonData
         await fs.writeFile(dbPath, JSON.stringify(jsonData, null, 2), 'utf8')
     } catch (err) {
         console.error(err)
