@@ -11,7 +11,17 @@ const categories = ['general', 'world', 'nation', 'technology', 'entertainment',
 const dbPath = './cache.json'
 const apiKeyConfirm = '128648h'
 
-let db = fs.readFile(dbPath, 'utf8')
+let db = []
+
+async function loadDb() {
+    try {
+        const data = await fs.readFile(dbPath, 'utf8')
+        db = JSON.parse(data)
+    } catch (err) {
+        console.error('Error reading cache file:', err)
+        db = []
+    }
+}
 
 async function refreshCache() {
     try {
@@ -42,43 +52,45 @@ async function refreshCache() {
     }
 }
 
-cron.schedule('0 0 * * *', () => {
-    console.log('Refreshing data...')
-    refreshCache()
-})
-
-// Middleware to parse JSON bodies
-app.use(express.json());
-
-// Define a basic route
-app.get('/', (req, res) => {
-    const { lang, category } = req.query;
-
-    if (!lang || !category) {
-        return res.status(400).json({ error: 'Missing required query parameters: lang and category' });
-    }
-
-    const result = db.find(doc => doc.lang === lang && doc.category === category);
-
-    if (result) {
-        res.json(result);
-    } else {
-        res.status(404).json({ message: 'Document not found' });
-    }
-});
-
-app.post('/refresh', (req, res) => {
-    const { apiKey } = req.query
-
-    if (apiKey == apiKeyConfirm) {
+loadDb().then(() => {
+    cron.schedule('0 0 * * *', () => {
+        console.log('Refreshing data...')
         refreshCache()
-        res.status(200).json({ message: 'Refreshing cache...' })
-    } else {
-        res.status(400).json({ message: 'Invaid API key' })
-    }
+    })
+    
+    // Middleware to parse JSON bodies
+    app.use(express.json());
+    
+    // Define a basic route
+    app.get('/', (req, res) => {
+        const { lang, category } = req.query;
+    
+        if (!lang || !category) {
+            return res.status(400).json({ error: 'Missing required query parameters: lang and category' });
+        }
+    
+        const result = db.find(doc => doc.lang === lang && doc.category === category);
+    
+        if (result) {
+            res.json(result);
+        } else {
+            res.status(404).json({ message: 'Document not found' });
+        }
+    });
+    
+    app.post('/refresh', (req, res) => {
+        const { apiKey } = req.query
+    
+        if (apiKey == apiKeyConfirm) {
+            refreshCache()
+            res.status(200).json({ message: 'Refreshing cache...' })
+        } else {
+            res.status(400).json({ message: 'Invaid API key' })
+        }
+    })
+    
+    // Start the server
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });    
 })
-
-// Start the server
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
